@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sans Fight Simulation</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #health-bar-container {
+            width: 300px;
+            height: 20px;
+            border: 2px solid white;
+            margin-top: 20px;
+        }
+
+        #health-bar {
+            width: 100%;
+            height: 100%;
+            background-color: green;
+            transition: width 0.5s ease;
+        }
+
+        #game {
+            width: 500px;
+            height: 500px;
+            border: 2px solid white;
+            position: relative;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        #player {
+            width: 20px;
+            height: 20px;
+            background-color: red;
+            position: absolute;
+            transform: translate(240px, 240px);
+            transition: transform 0.05s linear;
+        }
+
+        .bone {
+            width: 10px;
+            height: 100px;
+            background-color: white;
+            position: absolute;
+            top: 0;
+            animation: fall 3s linear infinite;
+        }
+
+        @keyframes fall {
+            0% { top: 0; }
+            100% { top: 500px; }
+        }
+
+        @keyframes damage {
+            0% { background-color: red; }
+            50% { background-color: white; }
+            100% { background-color: red; }
+        }
+
+        #sans {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 100px;
+            height: 100px;
+            background: url('Characters/sans.png') no-repeat center/contain;
+        }
+    </style>
+</head>
+<body>
+    <div id="health-bar-container">
+        <div id="health-bar"></div>
+    </div>
+
+    <div id="game">
+        <div id="player"></div>
+        <div id="sans"></div>
+    </div>
+
+    <script>
+        const player = document.getElementById('player');
+        const game = document.getElementById('game');
+        const healthBar = document.getElementById('health-bar');
+        const gameWidth = game.clientWidth;
+        const gameHeight = game.clientHeight;
+        let health = 100;
+        let hitCount = 0;
+        let isDead = false;
+
+        let playerX = 240;
+        let playerY = 240;
+        let speed = 2;
+        let velocityX = 0;
+        let velocityY = 0;
+
+        document.addEventListener('keydown', movePlayer);
+        document.addEventListener('keyup', stopPlayer);
+
+        function movePlayer(e) {
+            if (e.key === 'ArrowLeft') {
+                velocityX = -speed;
+            }
+            if (e.key === 'ArrowRight') {
+                velocityX = speed;
+            }
+            if (e.key === 'ArrowUp') {
+                velocityY = -speed;
+            }
+            if (e.key === 'ArrowDown') {
+                velocityY = speed;
+            }
+        }
+
+        function stopPlayer(e) {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                velocityX = 0;
+            }
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                velocityY = 0;
+            }
+        }
+
+        function updatePlayerPosition() {
+            playerX += velocityX;
+            playerY += velocityY;
+
+            if (playerX < 0) playerX = 0;
+            if (playerX > gameWidth - 20) playerX = gameWidth - 20;
+            if (playerY < 0) playerY = 0;
+            if (playerY > gameHeight - 20) playerY = gameHeight - 20;
+
+            player.style.transform = `translate(${playerX}px, ${playerY}px)`;
+            requestAnimationFrame(updatePlayerPosition);
+        }
+
+        function createBone() {
+            const bone = document.createElement('div');
+            bone.classList.add('bone');
+            bone.style.left = Math.floor(Math.random() * (gameWidth - 10)) + 'px';
+            game.appendChild(bone);
+
+            bone.addEventListener('animationend', () => {
+                bone.remove();
+            });
+
+            const boneInterval = setInterval(() => {
+                const boneRect = bone.getBoundingClientRect();
+                const playerRect = player.getBoundingClientRect();
+                if (
+                    boneRect.left < playerRect.right &&
+                    boneRect.right > playerRect.left &&
+                    boneRect.top < playerRect.bottom &&
+                    boneRect.bottom > playerRect.top
+                ) {
+                    handleHit(bone, boneInterval);
+                }
+            }, 10);
+
+            setTimeout(createBone, Math.random() * 1000 + 500);
+        }
+
+        function handleHit(bone, intervalId) {
+            if (!isDead && hitCount < 5) {
+                hitCount++;
+                if (health > 1) {
+                    health -= 20; // Reduced damage per hit to 20%
+                    updateHealthBar();
+                    player.style.animation = 'damage 0.2s';
+                    setTimeout(() => player.style.animation = '', 200);
+                }
+
+                if (health <= 1) {
+                    health = 1;
+                    updateHealthBar();
+                }
+
+                if (hitCount >= 5 || health <= 1) {
+                    gameOver();
+                }
+
+                bone.remove(); // Remove the bone on hit
+                clearInterval(intervalId); // Stop the bone falling animation
+            }
+        }
+
+        function updateHealthBar() {
+            healthBar.style.width = health + '%';
+            if (health <= 20) {
+                healthBar.style.backgroundColor = 'yellow';
+            }
+            if (health <= 1) {
+                healthBar.style.backgroundColor = 'red';
+            }
+        }
+
+        function gameOver() {
+            isDead = true;
+            setTimeout(() => {
+                alert("You Died! Restarting...");
+                location.reload();
+            }, 500);
+        }
+
+        createBone();
+        updatePlayerPosition();
+    </script>
+</body>
+</html>
